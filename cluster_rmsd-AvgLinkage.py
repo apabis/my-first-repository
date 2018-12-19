@@ -1,16 +1,9 @@
-import sys
-import numpy as np
-import mdtraj as md
-import scipy.cluster.hierarchy
-import sklearn.cluster
+import mdtraj
 import matplotlib as mpl
+import numpy as np
 from matplotlib import pyplot as plt
-from scipy.spatial.distance import squareform
-from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import AgglomerativeClustering
-from mpl_toolkits.mplot3d import Axes3D
 from sklearn.manifold import MDS
-
 
 traj_id = "Nprot_docked_amber"
 title = "Nprot_docked_amber_test"
@@ -28,20 +21,20 @@ trajs = []
 for i in [1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20]:
     print(i)
 #for i in range(1,no_replicas+1):
-    trajs.append(md.load('../'+str(i)+'/peptide_conf/all_novsite_fit.xtc',top='../frame0_chainA_novsite.pdb'))
-topology = md.load_topology('../frame0_chainA_novsite.pdb')
+    trajs.append(mdtraj.load('../' + str(i) + '/peptide_conf/all_novsite_fit.xtc', top='../frame0_chainA_novsite.pdb'))
+topology = mdtraj.load_topology('../frame0_chainA_novsite.pdb')
 
 # Load reference structures
 
-sys1 = md.load_topology('pept_exp_models/semiclosed23_new1.pdb')
-sys2 = md.load_topology('pept_exp_models/Tamm_1.pdb')
-sys3 = md.load_topology('pept_exp_models/Bax_cut_20aa_1.pdb')
-sys4 = md.load_topology('pept_exp_models/1xop_straight_helix_model1.pdb')
+sys1 = mdtraj.load_topology('pept_exp_models/semiclosed23_new1.pdb')
+sys2 = mdtraj.load_topology('pept_exp_models/Tamm_1.pdb')
+sys3 = mdtraj.load_topology('pept_exp_models/Bax_cut_20aa_1.pdb')
+sys4 = mdtraj.load_topology('pept_exp_models/1xop_straight_helix_model1.pdb')
 
-ref1 = md.load('pept_exp_models/semiclosed23_new1.pdb',atom_indices=sys1.select('resid 0 to 19 and backbone'))
-ref2 = md.load('pept_exp_models/Tamm_1.pdb',atom_indices=sys2.select('backbone'))
-ref3 = md.load('pept_exp_models/Bax_cut_20aa_1.pdb',atom_indices=sys3.select('backbone'))
-ref4 = md.load('pept_exp_models/1xop_straight_helix_model1.pdb',atom_indices=sys4.select('backbone'))
+ref1 = mdtraj.load('pept_exp_models/semiclosed23_new1.pdb', atom_indices=sys1.select('resid 0 to 19 and backbone'))
+ref2 = mdtraj.load('pept_exp_models/Tamm_1.pdb', atom_indices=sys2.select('backbone'))
+ref3 = mdtraj.load('pept_exp_models/Bax_cut_20aa_1.pdb', atom_indices=sys3.select('backbone'))
+ref4 = mdtraj.load('pept_exp_models/1xop_straight_helix_model1.pdb', atom_indices=sys4.select('backbone'))
 
 ##
 #Enable lookups like
@@ -92,7 +85,7 @@ for i in range(1,no_replicas):
     traj = traj.join(trajs[i])
 
 no_pept = 9 * no_replicas
-del(trajs)
+del trajs
 
 md_frames = [rep_len[i]/9 for i in range(no_replicas)] # no. frames for each peptide (=no. frames in each MD replica)
 
@@ -173,7 +166,7 @@ md_frame_id_merged = []
 for rep in range(no_replicas):
     for pept in range(9):
         for i in range(md_frames[rep]*pept,md_frames[rep]*pept+md_frames[rep]):
-            if i <= 0 and i >= md_frames[rep]:
+            if 0 >= i >= md_frames[rep]:
                 md_frame = i
             else:
                 md_frame = i - pept*md_frames[rep]
@@ -227,14 +220,14 @@ no_conf = len(sel_conf)
 
 rmsd_pair = np.empty((no_conf,no_conf))
 for i in range(no_conf):
-    rmsd_pair[i] = md.rmsd(sel_traj, sel_traj, i, atom_indices=backbone)
+    rmsd_pair[i] = mdtraj.rmsd(sel_traj, sel_traj, i, atom_indices=backbone)
 print(np.shape(rmsd_pair))
 print('Max pairwise rmsd: %f nm' % np.max(rmsd_pair))
 
 # against a single structure
 
-reference = md.load('../frame0_chainA_novsite.pdb')
-rmsd_single = md.rmsd(traj,reference,frame=0,atom_indices=backbone)
+reference = mdtraj.load('../frame0_chainA_novsite.pdb')
+rmsd_single = mdtraj.rmsd(traj, reference, frame=0, atom_indices=backbone)
 
 plt.plot(rmsd_single)
 
@@ -277,7 +270,7 @@ rmsd_pair_cl = [[] for x in range(n_clusters)]
 for cl in range(n_clusters):
     rmsd_pair_cl[cl]=np.empty((len(members[cl]),len(members[cl])))
     for i in range(len(members[cl])):
-        rmsd_pair_cl[cl][i] = md.rmsd(sel_traj.slice(members[cl]), sel_traj.slice(members[cl]), i, atom_indices=backbone)
+        rmsd_pair_cl[cl][i] = mdtraj.rmsd(sel_traj.slice(members[cl]), sel_traj.slice(members[cl]), i, atom_indices=backbone)
     sumsq = (rmsd_pair_cl[cl]**2).sum(axis=1)
     centroid.append(members[cl][sumsq.argmin()]) # atom indices from sel_traj, not the main traj
 
@@ -319,7 +312,7 @@ for i in range(len(sel_conf)):
 rmsd_to_center = np.empty((n_clusters,len(traj)))
 for c in range(n_clusters):
     reference = traj.slice(centroid[c])
-    rmsd_to_center[c] = md.rmsd(traj,reference,atom_indices=backbone)
+    rmsd_to_center[c] = mdtraj.rmsd(traj, reference, atom_indices=backbone)
 
 # Get rmsd values to centers of clusters for selected frames (grouped by clusters)
 
@@ -578,12 +571,12 @@ fig.savefig("Pept_clusterVStime" + str(n_clusters) + ".png",format='png', dpi=30
 
 ref_rmsd = np.empty((n_clusters,n_ref+1))
 for c in range(0,n_clusters):
-    cl = md.load(('Cluster'+str(c)+"_n"+str(n_clusters)+"_AvgLink_rep.pdb"),atom_indices=backbone)
+    cl = mdtraj.load(('Cluster' + str(c) + "_n" + str(n_clusters) + "_AvgLink_rep.pdb"), atom_indices=backbone)
     ref_rmsd[c,0] = occupancy[c]
-    ref_rmsd[c,1] = md.rmsd(cl,ref1)
-    ref_rmsd[c,2] = md.rmsd(cl,ref2)
-    ref_rmsd[c,3] = md.rmsd(cl,ref3)
-    ref_rmsd[c,4] = md.rmsd(cl,ref4)
+    ref_rmsd[c,1] = mdtraj.rmsd(cl, ref1)
+    ref_rmsd[c,2] = mdtraj.rmsd(cl, ref2)
+    ref_rmsd[c,3] = mdtraj.rmsd(cl, ref3)
+    ref_rmsd[c,4] = mdtraj.rmsd(cl, ref4)
 print(ref_rmsd)
 np.savetxt(traj_id + "_rmsd_center_to_ref_model_AvgLink_n"+str(n_clusters)+".out",ref_rmsd,fmt='%10.4f',header="Occupancy | RMSD of center to:  Weliky -- Tamm --  Bax -- straight helix")
 
@@ -593,10 +586,10 @@ traj_backbone = traj.atom_slice(atom_indices=backbone)
 
 rmsd_to_model = np.empty((4,len(traj)))
 
-rmsd_to_model[0]=md.rmsd(traj_backbone,ref1) # Weliky
-rmsd_to_model[1]=md.rmsd(traj_backbone,ref2) # Tamm
-rmsd_to_model[2]=md.rmsd(traj_backbone,ref3) # Bax
-rmsd_to_model[3]=md.rmsd(traj_backbone,ref4) # straight helix
+rmsd_to_model[0]= mdtraj.rmsd(traj_backbone, ref1) # Weliky
+rmsd_to_model[1]= mdtraj.rmsd(traj_backbone, ref2) # Tamm
+rmsd_to_model[2]= mdtraj.rmsd(traj_backbone, ref3) # Bax
+rmsd_to_model[3]= mdtraj.rmsd(traj_backbone, ref4) # straight helix
 
 rmsd_to_model = rmsd_to_model.transpose()
 
